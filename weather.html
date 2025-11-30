@@ -37,7 +37,7 @@
         const { useState, useEffect } = React;
 
         // --- HIER API KEY EINFÜGEN ---
-        const apiKey = "AIzaSyBi_OB8GTeaDLIqZ4Yqx8I1rOBaI5-QHV8"; 
+        const apiKey = "AIzaSyCBor0L5tEa3B-9bWu0FrIhBaGDKbZL2EA"; 
         // -----------------------------
 
         // Icons Definitionen
@@ -160,7 +160,6 @@
                 }
             }, []);
 
-            // Scroll Handlers
             const handlePrevHours = () => setHourlyOffset(prev => Math.max(0, prev - 1));
             const handleNextHours = () => {
                 if (weather && (new Date().getHours() + hourlyOffset + 4) < weather.hourly.time.length) {
@@ -180,7 +179,6 @@
 
             const current = getWeatherIcon(weather.current.weather_code, "w-12 h-12 text-blue-600");
             
-            // Indices
             const currentHourIndex = new Date().getHours();
             const displayStartIndex = currentHourIndex + hourlyOffset;
             const isAtStart = hourlyOffset === 0;
