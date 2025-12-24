@@ -35,13 +35,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ==========================================
-        // WICHTIG: HIER DEINEN API KEY EINFÜGEN!
-        // ==========================================
-        const apiKey = "AIzaSyCBor0L5tEa3B-9bWu0FrIhBaGDKbZL2EA"; 
-        // Beispiel: const apiKey = "AIzaSyD-xxxxxxxxxxxxxxxxxxxx";
-
-        // Farbige Icons Definitionen
+        // Icons Definitionen (Gleiche wie vorher)
         const Icons = {
             Sun: ({className}) => (
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
@@ -86,14 +80,15 @@
                     <path d="M4 17H20M6 20H18" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
             ),
-            // Interface Icons (bleiben outline style für UI Consistency)
+            // UI Icons
             Droplets: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>,
             Wind: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>,
             MapPin: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
             ChevronLeft: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15 18-6-6 6-6"/></svg>,
             ChevronRight: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 18 6-6-6-6"/></svg>,
             Sparkles: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>,
-            X: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>
+            X: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+            Settings: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         };
 
         const App = () => {
@@ -109,6 +104,36 @@
             const [geminiResult, setGeminiResult] = useState(null);
             const [geminiLoading, setGeminiLoading] = useState(false);
             const [showGemini, setShowGemini] = useState(false);
+            
+            // Key Management
+            const [showKeyInput, setShowKeyInput] = useState(false);
+            const [apiKey, setApiKey] = useState('');
+            const [inputKey, setInputKey] = useState('');
+
+            useEffect(() => {
+                const storedKey = localStorage.getItem('gemini_api_key');
+                if (storedKey) setApiKey(storedKey);
+                
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => fetchWeather(position.coords.latitude, position.coords.longitude),
+                        (err) => { fetchWeather(52.52, 13.41); setLocationName("Berlin (Fallback)"); }
+                    );
+                } else {
+                    fetchWeather(52.52, 13.41);
+                    setLocationName("Berlin (Fallback)");
+                }
+            }, []);
+
+            const saveApiKey = () => {
+                if (inputKey.trim().length > 10) {
+                    localStorage.setItem('gemini_api_key', inputKey.trim());
+                    setApiKey(inputKey.trim());
+                    setShowKeyInput(false);
+                    // Direkt Anfrage starten wenn Wetter da ist
+                    if(weather) setTimeout(() => askGemini(inputKey.trim()), 500);
+                }
+            };
 
             const getWeatherIcon = (code, className = "") => {
                 const props = { className };
@@ -143,15 +168,11 @@
                 }
             };
 
-            // Gemini Funktion
-            const askGemini = async () => {
-                // Check if key is missing
-                if (!apiKey || apiKey.length < 10) {
-                    setShowGemini(true);
-                    setGeminiResult("⚠️ Bitte trage deinen API Key im Code ein (Zeile 38)!");
+            const askGemini = async (keyToUse = apiKey) => {
+                if (!keyToUse) {
+                    setShowKeyInput(true);
                     return;
                 }
-
                 if (!weather) return;
                 
                 setShowGemini(true);
@@ -173,7 +194,7 @@
 
                 try {
                     const response = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keyToUse}`,
                         {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -181,32 +202,27 @@
                         }
                     );
 
-                    if (!response.ok) throw new Error(`API Fehler`);
+                    if (!response.ok) {
+                        // Bei Auth Fehler Key löschen
+                        if(response.status === 400 || response.status === 403) {
+                             localStorage.removeItem('gemini_api_key');
+                             setApiKey('');
+                             throw new Error("API Key ungültig oder abgelehnt.");
+                        }
+                        throw new Error(`API Fehler`);
+                    }
 
                     const data = await response.json();
                     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Die Wetterfee macht gerade Kaffeepause. ☕";
                     setGeminiResult(text);
                 } catch (error) {
                     console.error(error);
-                    setGeminiResult("Meine Kristallkugel ist beschlagen. Prüfe deinen API Key! 🔮");
+                    setGeminiResult(error.message || "Fehler bei der Verbindung. Bitte prüfe den Key.");
                 } finally {
                     setGeminiLoading(false);
                 }
             };
 
-            useEffect(() => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => fetchWeather(position.coords.latitude, position.coords.longitude),
-                        (err) => { fetchWeather(52.52, 13.41); setLocationName("Berlin (Fallback)"); }
-                    );
-                } else {
-                    fetchWeather(52.52, 13.41);
-                    setLocationName("Berlin (Fallback)");
-                }
-            }, []);
-
-            // Scroll Handlers
             const handlePrevHours = () => setHourlyOffset(prev => Math.max(0, prev - 1));
             const handleNextHours = () => {
                 if (weather && (new Date().getHours() + hourlyOffset + 4) < weather.hourly.time.length) {
@@ -225,8 +241,6 @@
             if (loading) return <div className="flex h-full items-center justify-center text-blue-500 font-sans animate-pulse">Lade Wetter...</div>;
 
             const current = getWeatherIcon(weather.current.weather_code, "w-12 h-12 text-blue-600");
-            
-            // Indices
             const currentHourIndex = new Date().getHours();
             const displayStartIndex = currentHourIndex + hourlyOffset;
             const isAtStart = hourlyOffset === 0;
@@ -235,8 +249,36 @@
             return (
                 <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-white font-sans relative ring-1 ring-black/5">
                     
+                    {/* Key Input Modal */}
+                    {showKeyInput && (
+                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                            <div className="bg-white rounded-xl p-5 w-full shadow-2xl animate-slide-in">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="font-bold text-slate-700">API Key Setup</h3>
+                                    <button onClick={() => setShowKeyInput(false)}><Icons.X className="w-5 h-5 text-slate-400"/></button>
+                                </div>
+                                <p className="text-xs text-slate-500 mb-3">
+                                    Dein Key wird nur lokal in deinem Browser gespeichert.
+                                </p>
+                                <input 
+                                    type="text" 
+                                    className="w-full border border-slate-300 rounded-lg p-2 text-sm mb-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="AIzaSy..."
+                                    value={inputKey}
+                                    onChange={(e) => setInputKey(e.target.value)}
+                                />
+                                <button 
+                                    onClick={saveApiKey}
+                                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
+                                >
+                                    Speichern & Starten
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Gemini Overlay */}
-                    {showGemini && (
+                    {showGemini && !showKeyInput && (
                     <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/20 backdrop-blur-[2px]">
                         <div className="m-4 w-full overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/10 animate-slide-in">
                         <div className="flex items-center justify-between bg-gradient-to-r from-indigo-500 to-purple-600 p-3 text-white">
@@ -268,7 +310,7 @@
                         
                         {/* KI Button */}
                         <button 
-                            onClick={askGemini}
+                            onClick={() => askGemini()}
                             className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/60 text-indigo-600 shadow-sm backdrop-blur-md transition-all hover:bg-white hover:scale-110 hover:shadow-md"
                         >
                             <Icons.Sparkles className="h-4 w-4" />
@@ -300,7 +342,7 @@
                             </div>
                         </div>
 
-                        {/* Hourly simple view with scrolling */}
+                        {/* Hourly */}
                         <div className="flex justify-between items-center mt-8 px-1">
                              <button 
                                 onClick={handlePrevHours}
