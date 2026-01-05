@@ -19,8 +19,13 @@
     <style>
         body { background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
-        .number-glow { text-shadow: 0 0 20px rgba(249, 115, 22, 0.2); }
+        .number-glow { text-shadow: 0 0 20px rgba(249, 115, 22, 0.15); }
         .clock-font { font-variant-numeric: tabular-nums; }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-soft { animation: pulse-soft 3s infinite; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen flex items-center justify-center overflow-hidden">
@@ -36,16 +41,18 @@
         const ClockIcon = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 
         const App = () => {
-            const TARGET_DATE = new Date(2026, 6, 31); // 31. Juli 2026
-            const [workdaysLeft, setWorkdaysLeft] = useState(0);
+            const TARGET_DATE = new Date(2026, 6, 31, 17, 0, 0); // 31. Juli 2026, 17:00 Uhr
+            const WORK_START_HOUR = 8;
+            const WORK_END_HOUR = 17;
+            const WORK_HOURS_PER_DAY = WORK_END_HOUR - WORK_START_HOUR; // 9h
+
+            const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
             const [currentTime, setCurrentTime] = useState(new Date());
 
-            // Liste der expliziten freien Tage (Format: "MM-DD")
+            // Liste der freien Tage (Format: "MM-DD")
             const EXCLUDED_DATES = [
-                "01-19", "01-20", "01-21", "01-26",
-                "03-04", "03-30", "03-31",
-                "04-01", "04-03", "04-06",
-                "05-14", "05-15", "05-22", "05-25",
+                "01-19", "01-20", "01-21", "01-26", "03-04", "03-30", "03-31",
+                "04-01", "04-03", "04-06", "05-14", "05-15", "05-22", "05-25",
                 "06-10", "06-22"
             ];
 
@@ -59,7 +66,6 @@
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 const dateStr = `${month}-${day}`;
-
                 if (EXCLUDED_DATES.includes(dateStr)) return true;
                 for (const [start, end] of EXCLUDED_RANGES) {
                     if (dateStr >= start && dateStr <= end) return true;
@@ -67,98 +73,129 @@
                 return false;
             };
 
-            const calculateWorkdays = () => {
-                let count = 0;
-                let cur = new Date();
-                cur.setHours(0, 0, 0, 0);
-                
-                while (cur <= TARGET_DATE) {
-                    const dayOfWeek = cur.getDay();
-                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                    if (!isWeekend && !isExcluded(cur)) {
-                        count++;
+            const calculateRemainingWorkTime = () => {
+                const now = new Date();
+                if (now >= TARGET_DATE) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+                let totalSeconds = 0;
+                let iter = new Date(now.getTime());
+
+                // Wir iterieren tageweise bis zum Zieldatum
+                const endIter = new Date(TARGET_DATE.getTime());
+                endIter.setHours(23, 59, 59, 999);
+
+                while (iter <= endIter) {
+                    const dayOfWeek = iter.getDay();
+                    const isWorkDay = (dayOfWeek !== 0 && dayOfWeek !== 6 && !isExcluded(iter));
+
+                    if (isWorkDay) {
+                        const dayStart = new Date(iter.getTime());
+                        dayStart.setHours(WORK_START_HOUR, 0, 0, 0);
+                        
+                        const dayEnd = new Date(iter.getTime());
+                        dayEnd.setHours(WORK_END_HOUR, 0, 0, 0);
+
+                        // Wenn wir am Zieldatum sind, darf die Arbeit nicht nach 17:00 gezählt werden
+                        const effectiveEnd = iter.toDateString() === TARGET_DATE.toDateString() 
+                            ? new Date(TARGET_DATE.getTime()) 
+                            : dayEnd;
+
+                        const start = new Date(Math.max(now.getTime(), dayStart.getTime()));
+                        const end = new Date(Math.min(effectiveEnd.getTime(), effectiveEnd.getTime()));
+
+                        // Nur wenn das berechnete Fenster in der Zukunft liegt und innerhalb der Arbeitszeit
+                        if (start < effectiveEnd && start < endIter) {
+                            const actualStart = start > dayStart ? start : dayStart;
+                            const actualEnd = effectiveEnd;
+                            
+                            if (actualEnd > actualStart) {
+                                totalSeconds += Math.max(0, (actualEnd.getTime() - actualStart.getTime()) / 1000);
+                            }
+                        }
                     }
-                    cur.setDate(cur.getDate() + 1);
+                    // Zum nächsten Tag springen und auf 00:00 setzen für saubere Iteration
+                    iter.setDate(iter.getDate() + 1);
+                    iter.setHours(0, 0, 0, 0);
                 }
-                return count;
+
+                // Umrechnung in Tage (à 9h), Stunden, Minuten, Sekunden
+                const secondsInWorkDay = WORK_HOURS_PER_DAY * 3600;
+                const d = Math.floor(totalSeconds / secondsInWorkDay);
+                const h = Math.floor((totalSeconds % secondsInWorkDay) / 3600);
+                const m = Math.floor((totalSeconds % 3600) / 60);
+                const s = Math.floor(totalSeconds % 60);
+
+                return { days: d, hours: h, minutes: m, seconds: s };
             };
 
             useEffect(() => {
-                // Initial berechnen
-                setWorkdaysLeft(calculateWorkdays());
-                
-                // Jede Sekunde aktualisieren (für die Uhr)
                 const timerId = setInterval(() => {
-                    const now = new Date();
-                    setCurrentTime(now);
-                    // Den Arbeitstage-Zähler nur um Mitternacht neu berechnen (oder zur Sicherheit jede Minute)
-                    if (now.getSeconds() === 0) {
-                        setWorkdaysLeft(calculateWorkdays());
-                    }
+                    setCurrentTime(new Date());
+                    setTimeLeft(calculateRemainingWorkTime());
                 }, 1000);
-                
                 return () => clearInterval(timerId);
             }, []);
 
-            const formatTime = (date) => {
-                return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            };
-
-            const formatDate = (date) => {
-                return date.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' });
-            };
+            const formatNum = (n) => String(n).padStart(2, '0');
 
             return (
-                <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 font-sans">
+                <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 font-sans">
                     
                     {/* Header */}
-                    <div className="bg-orange-600 p-5 text-white">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center space-x-2">
-                                <CalendarIcon className="h-5 w-5 text-orange-200" />
-                                <h2 className="text-sm font-bold tracking-tight uppercase">Arbeitstage</h2>
-                            </div>
-                            <div className="flex items-center space-x-1.5 bg-orange-700/50 px-3 py-1 rounded-full border border-orange-400/30">
-                                <ClockIcon className="h-3.5 w-3.5 text-orange-200" />
-                                <span className="text-xs font-mono font-bold clock-font">{formatTime(currentTime)}</span>
-                            </div>
+                    <div className="bg-orange-600 p-5 text-white flex justify-between items-center">
+                        <div className="flex items-center space-x-2">
+                            <CalendarIcon className="h-5 w-5 text-orange-200" />
+                            <h2 className="text-sm font-bold tracking-tight uppercase">Netto-Arbeitszeit</h2>
                         </div>
-                    </div>
-
-                    {/* Hauptanzeige */}
-                    <div className="p-8 text-center bg-white border-b border-stone-50">
-                        <div className="relative inline-block">
-                            <span className="text-7xl font-black text-stone-800 tabular-nums tracking-tighter number-glow">
-                                {workdaysLeft}
+                        <div className="bg-orange-700/50 px-3 py-1 rounded-full border border-orange-400/30 flex items-center space-x-1.5">
+                            <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse"></div>
+                            <span className="text-xs font-mono font-bold clock-font">
+                                {currentTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                             </span>
-                            <div className="absolute -top-1 -right-6">
-                                <CoffeeIcon className="h-6 w-6 text-orange-500 animate-pulse" />
-                            </div>
                         </div>
-                        <p className="mt-2 text-stone-400 font-bold uppercase tracking-widest text-[10px]">
-                            Verbleibende Arbeitstage bis 31.07.26
-                        </p>
                     </div>
 
-                    {/* Aktuelles Datum / Schnell-Info */}
-                    <div className="bg-stone-50 px-6 py-4 flex justify-between items-center border-t border-stone-100">
+                    {/* Countdown Anzeige */}
+                    <div className="p-8 bg-white text-center">
+                        <div className="grid grid-cols-4 gap-2">
+                            {[
+                                { val: timeLeft.days, label: 'Tage' },
+                                { val: timeLeft.hours, label: 'Std' },
+                                { val: timeLeft.minutes, label: 'Min' },
+                                { val: timeLeft.seconds, label: 'Sek' }
+                            ].map((unit, i) => (
+                                <div key={i} className="flex flex-col items-center">
+                                    <span className="text-4xl md:text-5xl font-black text-stone-800 tabular-nums tracking-tighter number-glow">
+                                        {i === 0 ? unit.val : formatNum(unit.val)}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mt-1">
+                                        {unit.label}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-6 flex items-center justify-center space-x-2 text-stone-400">
+                            <CoffeeIcon className="h-4 w-4" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest">bis zum 31.07.2026 (17 Uhr)</p>
+                        </div>
+                    </div>
+
+                    {/* Detail-Leiste */}
+                    <div className="bg-stone-50 px-6 py-4 border-t border-stone-100 flex justify-between items-center">
                         <div className="flex flex-col">
-                            <span className="text-[10px] text-stone-400 font-bold uppercase tracking-tighter">Heute ist:</span>
-                            <span className="text-sm font-bold text-stone-700">{formatDate(currentTime)}</span>
+                            <span className="text-[9px] text-stone-400 font-bold uppercase tracking-tighter">Basis-Arbeitstag:</span>
+                            <span className="text-xs font-bold text-stone-600 italic">08:00 — 17:00 Uhr</span>
                         </div>
                         <div className="text-right">
-                            <span className="text-[10px] text-stone-400 font-bold uppercase tracking-tighter">Status:</span>
-                            <div className="flex items-center space-x-1 justify-end">
-                                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                                <span className="text-xs font-bold text-stone-600">Aktiv</span>
-                            </div>
+                            <span className="text-[9px] text-stone-400 font-bold uppercase tracking-tighter">Freie Tage:</span>
+                            <span className="text-xs font-bold text-orange-600 block">Berücksichtigt</span>
                         </div>
                     </div>
                     
-                    {/* Status Footer */}
-                    <div className="bg-orange-50 px-6 py-2.5 text-center flex justify-center items-center space-x-2">
-                        <span className="text-[10px] text-orange-700 font-bold tracking-wide uppercase">
-                            Geschätzt: {Math.round(workdaysLeft / 20)} Arbeitsmonate
+                    {/* Progress Footer */}
+                    <div className="bg-orange-50 px-6 py-2.5 text-center">
+                        <span className="text-[10px] text-orange-700 font-bold tracking-wide uppercase animate-pulse-soft">
+                            Jede Sekunde bringt dich näher an das Ziel.
                         </span>
                     </div>
                 </div>
