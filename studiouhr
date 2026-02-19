@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Clock Pro</title>
+    
+    <!-- React & Tailwind -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+        body { 
+            background-color: #000000; 
+            margin: 0; 
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            color: white;
+        }
+
+        .glow-red {
+            text-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
+        }
+
+        .dot-glow {
+            filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.8));
+        }
+
+        /* Verhindert Scrollen und Textauswahl für Widget-Feeling */
+        * {
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const App = () => {
+            const [time, setTime] = useState(new Date());
+            const [locationInfo, setLocationInfo] = useState("Standort...");
+            const [tzLabel, setTzLabel] = useState("UTC");
+            const [isSmall, setIsSmall] = useState(false);
+
+            useEffect(() => {
+                // Zeit-Update (20 FPS für flüssige Millisekunden)
+                const interval = setInterval(() => setTime(new Date()), 50);
+                
+                // Responsive Check: Schaltet Design um, wenn das Fenster klein ist (Widget-Modus)
+                const handleResize = () => setIsSmall(window.innerWidth < 400);
+                window.addEventListener('resize', handleResize);
+                handleResize();
+
+                // Standort-Ermittlung
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(async (pos) => {
+                        try {
+                            const { latitude, longitude } = pos.coords;
+                            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                            const data = await response.json();
+                            const city = data.address.city || data.address.town || data.address.village || data.address.suburb || "Lokal";
+                            setLocationInfo(city.toUpperCase());
+                        } catch (e) {
+                            setLocationInfo("LOKAL");
+                        }
+                    }, () => setLocationInfo("LOKAL"));
+                }
+
+                // Zeitzone ermitteln
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const offset = -new Date().getTimezoneOffset() / 60;
+                setTzLabel(`${tz.split('/').pop().replace('_', ' ')} (UTC${offset >= 0 ? '+' : ''}${offset})`);
+
+                return () => {
+                    clearInterval(interval);
+                    window.removeEventListener('resize', handleResize);
+                };
+            }, []);
+
+            const hours = time.getHours().toString().padStart(2, '0');
+            const minutes = time.getMinutes().toString().padStart(2, '0');
+            const seconds = time.getSeconds();
+            const ms = Math.floor(time.getMilliseconds() / 10).toString().padStart(2, '0');
+            
+            const dateStr = time.toLocaleDateString('de-DE', { 
+                weekday: 'short', 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+            }).toUpperCase();
+
+            // Erzeuge 60 Punkte für den Sekundenring
+            const dots = useMemo(() => {
+                const temp = [];
+                const radius = 43; 
+                for (let i = 0; i < 60; i++) {
+                    const angle = (i * 6 - 90) * (Math.PI / 180);
+                    temp.push({ 
+                        x: 50 + radius * Math.cos(angle), 
+                        y: 50 + radius * Math.sin(angle), 
+                        index: i 
+                    });
+                }
+                return temp;
+            }, []);
+
+            return (
+                <div className={`h-screen w-screen flex flex-col items-center justify-between p-6 md:p-10 ${isSmall ? 'justify-center py-4 px-4' : ''}`}>
+                    
+                    {/* Top Bar - nur im großen Modus */}
+                    {!isSmall && (
+                        <div className="w-full flex justify-between items-end border-b border-zinc-900 pb-4">
+                            <div className="flex flex-col">
+                                <span className="text-zinc-600 text-[9px] font-bold tracking-[0.4em] uppercase">Reference System</span>
+                                <span className="text-lg md:text-xl font-extrabold tracking-tighter text-zinc-200 uppercase tracking-tighter">Studio Master</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-zinc-500 text-[10px] md:text-xs font-medium uppercase tracking-widest">{dateStr}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Main Clock Circle */}
+                    <div className={`relative flex items-center justify-center aspect-square ${isSmall ? 'w-full max-h-[75vh]' : 'h-[50vh] md:h-[55vh]'}`}>
+                        
+                        {/* Sekunden-Punkte SVG */}
+                        <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none overflow-visible">
+                            {dots.map((dot) => {
+                                const isActive = dot.index <= seconds;
+                                return (
+                                    <circle
+                                        key={dot.index}
+                                        cx={dot.x}
+                                        cy={dot.y}
+                                        r={isActive ? (isSmall ? "1.0" : "0.85") : "0.45"}
+                                        className={`transition-all duration-300 ${isActive ? 'fill-red-600 dot-glow' : 'fill-zinc-800'}`}
+                                    />
+                                );
+                            })}
+                        </svg>
+
+                        {/* Digital Uhrzeit im Zentrum */}
+                        <div className="absolute flex flex-col items-center">
+                            <div className="flex items-baseline">
+                                <span className={`${isSmall ? 'text-[22vw]' : 'text-[9vh] md:text-[13vh]'} font-black tracking-tighter tabular-nums glow-red leading-none`}>
+                                    {hours}:{minutes}
+                                </span>
+                                {!isSmall && (
+                                    <div className="flex flex-col ml-2 md:ml-4">
+                                        <span className="text-[3.5vh] md:text-[5vh] font-bold text-red-600 tabular-nums leading-none">
+                                            {seconds.toString().padStart(2, '0')}
+                                        </span>
+                                        <span className="text-[1vh] md:text-[1.8vh] text-zinc-700 font-bold tabular-nums mt-0.5">
+                                            .{ms}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            {isSmall && (
+                                <span className="text-[7vw] font-bold text-red-600 tabular-nums -mt-2">
+                                    {seconds.toString().padStart(2, '0')}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Footer Indicators */}
+                    <div className={`w-full flex justify-between items-center ${isSmall ? 'mt-2' : 'pt-2'}`}>
+                        <div className="flex space-x-6 md:space-x-10">
+                            <div className="flex flex-col">
+                                <span className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-0.5">{isSmall ? 'LOC' : 'Location / TZ'}</span>
+                                <span className="text-[9px] md:text-xs font-bold text-zinc-400 uppercase tracking-tighter truncate max-w-[80px] md:max-w-none">
+                                    {locationInfo}
+                                </span>
+                            </div>
+                            {!isSmall && (
+                                <div className="flex flex-col border-l border-zinc-900 pl-4 md:pl-8">
+                                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mb-0.5">Clock Sync</span>
+                                    <div className="flex items-center space-x-1.5">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>
+                                        <span className="text-[9px] md:text-xs font-bold text-green-600 tracking-tighter uppercase">Locked</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col items-center">
+                            <div className={`bg-red-950/10 border border-red-900/30 px-4 md:px-7 py-1.5 rounded flex items-center space-x-2 md:space-x-3`}>
+                                <div className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-red-600 animate-pulse"></div>
+                                <span className="text-red-500 font-black text-[10px] md:text-lg tracking-[0.2em] uppercase">On Air</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col items-end">
+                            <span className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-0.5">KW</span>
+                            <span className="text-sm md:text-lg font-bold text-zinc-300 uppercase leading-none">{getWeekNumber(time)}</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
