@@ -13,7 +13,7 @@
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
 
         body, html { 
-            background-color: transparent; /* Erlaubt Transparenz in Plash */
+            background-color: transparent; /* Wichtig für Widget-Optik */
             margin: 0; 
             padding: 0;
             overflow: hidden;
@@ -24,21 +24,39 @@
             justify-content: center;
         }
 
-        svg {
+        #root {
             width: 100%;
             height: 100%;
-            max-width: 100vw;
-            max-height: 100vh;
-            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .glow-red { filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.8)); }
+        svg {
+            /* Das SVG skaliert sich immer passend zum Fenster */
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            font-family: 'JetBrains Mono', monospace;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        }
+
+        .glow-red { filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.7)); }
         .dot-glow { filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.9)); }
+        
+        /* Sanfter Puls-Effekt für ON AIR */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+        .animate-pulse-red { animation: pulse 2s infinite ease-in-out; }
     </style>
 </head>
 <body>
 
-    <div id="root" style="width: 100%; height: 100%;"></div>
+    <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
@@ -73,12 +91,12 @@
                 weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' 
             }).toUpperCase();
 
-            // Sekunden-Punkte berechnen (Koordinaten im 100x120 System)
+            // Sekunden-Punkte (Koordinaten im 100x120 System)
             const dots = useMemo(() => {
                 const temp = [];
                 const radius = 42; 
                 const centerX = 50;
-                const centerY = 60; // Zentriert im 120er System
+                const centerY = 58; 
                 for (let i = 0; i < 60; i++) {
                     const angle = (i * 6 - 90) * (Math.PI / 180);
                     temp.push({ 
@@ -91,17 +109,18 @@
             }, []);
 
             return (
+                /* viewBox 0 0 100 120 stellt sicher, dass alles quadratisch bleibt */
                 <svg viewBox="0 0 100 120" preserveAspectRatio="xMidYMid meet">
-                    {/* Hintergrund (Optional für bessere Lesbarkeit auf Desktop) */}
-                    <rect width="100" height="120" fill="rgba(0,0,0,0.85)" rx="5" />
+                    {/* Widget-Hintergrund (wie Apple Widgets) */}
+                    <rect x="2" y="2" width="96" height="116" fill="rgba(0,0,0,0.85)" rx="8" />
 
                     {/* HEADER */}
-                    <text x="5" y="8" fontSize="2" fontWeight="700" fill="#4b5563" letterSpacing="0.2">REFERENCE SYSTEM</text>
-                    <text x="5" y="13" fontSize="4" fontWeight="800" fill="#e5e7eb" letterSpacing="-0.2">STUDIO MASTER</text>
-                    <text x="95" y="13" fontSize="2.5" fontWeight="500" fill="#6b7280" textAnchor="end">{dateStr}</text>
-                    <line x1="5" y1="16" x2="95" y2="16" stroke="#18181b" strokeWidth="0.5" />
+                    <text x="7" y="10" fontSize="2" fontWeight="700" fill="#4b5563" letterSpacing="0.2">REFERENCE SYSTEM</text>
+                    <text x="7" y="15" fontSize="4.5" fontWeight="800" fill="#f3f4f6" letterSpacing="-0.2">STUDIO MASTER</text>
+                    <text x="93" y="15" fontSize="2.8" fontWeight="500" fill="#6b7280" textAnchor="end">{dateStr}</text>
+                    <line x1="7" y1="18" x2="93" y2="18" stroke="#1f2937" strokeWidth="0.4" />
 
-                    {/* CLOCK CENTER AREA */}
+                    {/* CLOCK AREA */}
                     {dots.map((dot) => {
                         const isActive = dot.index <= seconds;
                         return (
@@ -110,76 +129,74 @@
                                 cx={dot.x}
                                 cy={dot.y}
                                 r={isActive ? "0.9" : "0.5"}
-                                fill={isActive ? "#ef4444" : "#1f2937"}
+                                fill={isActive ? "#ef4444" : "#111827"}
                                 className={isActive ? "dot-glow" : ""}
                                 style={{ transition: 'fill 0.3s ease' }}
                             />
                         );
                     })}
 
-                    {/* Zeit: HH:MM */}
+                    {/* Zeit HH:MM (Zentriert) */}
                     <text 
-                        x="46" 
-                        y="62" 
+                        x="44" 
+                        y="60" 
                         textAnchor="middle" 
                         dominantBaseline="middle" 
                         fill="white" 
-                        fontSize="22" 
+                        fontSize="24" 
                         fontWeight="800" 
                         className="glow-red"
-                        style={{ letterSpacing: '-1px' }}
+                        style={{ letterSpacing: '-1.5px' }}
                     >
                         {hours}:{minutes}
                     </text>
 
-                    {/* Sekunden: SS */}
+                    {/* Sekunden (Rechts daneben) */}
                     <text 
-                        x="68" 
-                        y="62" 
+                        x="66" 
+                        y="58" 
                         textAnchor="start" 
                         dominantBaseline="middle" 
                         fill="#ef4444" 
-                        fontSize="9" 
+                        fontSize="10" 
                         fontWeight="700"
                     >
                         {seconds.toString().padStart(2, '0')}
                     </text>
 
-                    {/* Millisekunden: .ms */}
+                    {/* Millisekunden (Unter den Sekunden) */}
                     <text 
-                        x="68" 
-                        y="69" 
+                        x="66" 
+                        y="66" 
                         textAnchor="start" 
                         dominantBaseline="middle" 
                         fill="#3f3f46" 
-                        fontSize="3.5" 
+                        fontSize="3.8" 
                         fontWeight="600"
                     >
                         .{ms}
                     </text>
 
                     {/* FOOTER */}
-                    <line x1="5" y1="104" x2="95" y2="104" stroke="#18181b" strokeWidth="0.5" />
+                    <line x1="7" y1="102" x2="93" y2="102" stroke="#1f2937" strokeWidth="0.4" />
                     
                     {/* Timezone */}
-                    <text x="5" y="110" fontSize="2" fontWeight="700" fill="#4b5563">TIMEZONE</text>
-                    <text x="5" y="114" fontSize="2.5" fontWeight="700" fill="#9ca3af">{locationName} (UTC+1)</text>
+                    <text x="7" y="108" fontSize="2.2" fontWeight="700" fill="#4b5563">TIMEZONE</text>
+                    <text x="7" y="113" fontSize="2.8" fontWeight="700" fill="#9ca3af">{locationName} (UTC+1)</text>
 
                     {/* Clock Sync */}
-                    <text x="28" y="110" fontSize="2" fontWeight="700" fill="#4b5563">CLOCK SYNC</text>
-                    <circle cx="29" cy="113.5" r="0.6" fill="#22c55e" />
-                    <text x="31" y="114" fontSize="2.5" fontWeight="700" fill="#16a34a">LOCKED</text>
+                    <text x="32" y="108" fontSize="2.2" fontWeight="700" fill="#4b5563">CLOCK SYNC</text>
+                    <circle cx="33.5" cy="112.2" r="0.7" fill="#22c55e" />
+                    <text x="35.5" y="113" fontSize="2.8" fontWeight="700" fill="#16a34a">LOCKED</text>
 
-                    {/* ON AIR Box */}
-                    <rect x="52" y="108" width="18" height="8" rx="1" fill="rgba(153, 27, 27, 0.1)" stroke="rgba(153, 27, 27, 0.3)" strokeWidth="0.3" />
-                    <circle cx="56" cy="112" r="0.8" fill="#ef4444">
-                        <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
-                    </circle>
-                    <text x="59" y="112.5" fontSize="3.5" fontWeight="900" fill="#ef4444" letterSpacing="0.5">ON AIR</text>
+                    {/* ON AIR Indicator */}
+                    <rect x="55" y="107" width="20" height="8" rx="1.5" fill="rgba(153, 27, 27, 0.15)" stroke="rgba(239, 68, 68, 0.3)" strokeWidth="0.3" />
+                    <circle cx="59" cy="111" r="0.8" fill="#ef4444" className="animate-pulse-red" />
+                    <text x="62" y="111.8" fontSize="3.5" fontWeight="900" fill="#ef4444" letterSpacing="0.4">ON AIR</text>
 
                     {/* Calendar */}
-                    <text x="95" y="110" fontSize="2" fontWeight="700" fill="#4b5563" textAnchor="end">CALENDAR</text>
-                    <text x="95" y="114" fontSize="3.5" fontWeight="700" fill="#d1d5db" textAnchor="end">KW {getWeekNumber(time)}</text>
+                    <text x="93" y="108" fontSize="2.2" fontWeight="700" fill="#4b5563" textAnchor="end">CALENDAR</text>
+                    <text x="93" y="113" fontSize="3.8" fontWeight="700" fill="#d1d5db" textAnchor="end">KW {getWeekNumber(time)}</text>
                 </svg>
             );
         };
