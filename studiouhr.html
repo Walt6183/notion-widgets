@@ -3,57 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Clock Pro</title>
+    <title>Studio Clock Pro - Widget</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
 
-        :root {
-            --bg-color: #000000;
-        }
-
         body, html { 
-            background-color: var(--bg-color); 
+            background-color: transparent; /* Erlaubt Transparenz in Plash */
             margin: 0; 
             padding: 0;
             overflow: hidden;
-            font-family: 'JetBrains Mono', monospace;
-            color: white;
-            height: 100%;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        #root {
-            height: 100%;
+        svg {
             width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .glow-red {
-            text-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
-        }
-
-        .dot-glow {
-            filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.8));
-        }
-
-        * {
-            user-select: none;
-            -webkit-user-drag: none;
-            box-sizing: border-box;
-        }
+        .glow-red { filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.8)); }
+        .dot-glow { filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.9)); }
     </style>
 </head>
 <body>
 
-    <div id="root"></div>
+    <div id="root" style="width: 100%; height: 100%;"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
@@ -61,16 +46,11 @@
         const App = () => {
             const [time, setTime] = useState(new Date());
             const [locationName, setLocationName] = useState("LOKAL");
-            const [dimensions, setDimensions] = useState({ 
-                width: window.innerWidth, 
-                height: window.innerHeight 
-            });
 
             useEffect(() => {
                 const interval = setInterval(() => setTime(new Date()), 50);
-                const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
-                window.addEventListener('resize', handleResize);
-
+                
+                // Standort-Ermittlung
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(async (pos) => {
                         try {
@@ -81,11 +61,7 @@
                         } catch(e) {}
                     });
                 }
-
-                return () => {
-                    clearInterval(interval);
-                    window.removeEventListener('resize', handleResize);
-                };
+                return () => clearInterval(interval);
             }, []);
 
             const hours = time.getHours().toString().padStart(2, '0');
@@ -94,108 +70,117 @@
             const ms = Math.floor(time.getMilliseconds() / 10).toString().padStart(2, '0');
             
             const dateStr = time.toLocaleDateString('de-DE', { 
-                weekday: 'short', day: '2-digit', month: 'short'
+                weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' 
             }).toUpperCase();
 
+            // Sekunden-Punkte berechnen (Koordinaten im 100x120 System)
             const dots = useMemo(() => {
                 const temp = [];
-                const radius = 44; 
+                const radius = 42; 
+                const centerX = 50;
+                const centerY = 60; // Zentriert im 120er System
                 for (let i = 0; i < 60; i++) {
                     const angle = (i * 6 - 90) * (Math.PI / 180);
-                    temp.push({ x: 50 + radius * Math.cos(angle), y: 50 + radius * Math.sin(angle), index: i });
+                    temp.push({ 
+                        x: centerX + radius * Math.cos(angle), 
+                        y: centerY + radius * Math.sin(angle), 
+                        index: i 
+                    });
                 }
                 return temp;
             }, []);
 
-            const minSide = Math.min(dimensions.width, dimensions.height);
-            const isVerySmall = minSide < 250;
-            const isMedium = minSide < 500;
-            
-            // Verhindert, dass die Uhr jemals den Rand berührt
-            const clockPx = minSide * (isVerySmall ? 0.85 : 0.75);
-
             return (
-                <div className="h-full w-full flex flex-col items-center justify-between p-3 md:p-6 overflow-hidden">
+                <svg viewBox="0 0 100 120" preserveAspectRatio="xMidYMid meet">
+                    {/* Hintergrund (Optional für bessere Lesbarkeit auf Desktop) */}
+                    <rect width="100" height="120" fill="rgba(0,0,0,0.85)" rx="5" />
+
+                    {/* HEADER */}
+                    <text x="5" y="8" fontSize="2" fontWeight="700" fill="#4b5563" letterSpacing="0.2">REFERENCE SYSTEM</text>
+                    <text x="5" y="13" fontSize="4" fontWeight="800" fill="#e5e7eb" letterSpacing="-0.2">STUDIO MASTER</text>
+                    <text x="95" y="13" fontSize="2.5" fontWeight="500" fill="#6b7280" textAnchor="end">{dateStr}</text>
+                    <line x1="5" y1="16" x2="95" y2="16" stroke="#18181b" strokeWidth="0.5" />
+
+                    {/* CLOCK CENTER AREA */}
+                    {dots.map((dot) => {
+                        const isActive = dot.index <= seconds;
+                        return (
+                            <circle
+                                key={dot.index}
+                                cx={dot.x}
+                                cy={dot.y}
+                                r={isActive ? "0.9" : "0.5"}
+                                fill={isActive ? "#ef4444" : "#1f2937"}
+                                className={isActive ? "dot-glow" : ""}
+                                style={{ transition: 'fill 0.3s ease' }}
+                            />
+                        );
+                    })}
+
+                    {/* Zeit: HH:MM */}
+                    <text 
+                        x="46" 
+                        y="62" 
+                        textAnchor="middle" 
+                        dominantBaseline="middle" 
+                        fill="white" 
+                        fontSize="22" 
+                        fontWeight="800" 
+                        className="glow-red"
+                        style={{ letterSpacing: '-1px' }}
+                    >
+                        {hours}:{minutes}
+                    </text>
+
+                    {/* Sekunden: SS */}
+                    <text 
+                        x="68" 
+                        y="62" 
+                        textAnchor="start" 
+                        dominantBaseline="middle" 
+                        fill="#ef4444" 
+                        fontSize="9" 
+                        fontWeight="700"
+                    >
+                        {seconds.toString().padStart(2, '0')}
+                    </text>
+
+                    {/* Millisekunden: .ms */}
+                    <text 
+                        x="68" 
+                        y="69" 
+                        textAnchor="start" 
+                        dominantBaseline="middle" 
+                        fill="#3f3f46" 
+                        fontSize="3.5" 
+                        fontWeight="600"
+                    >
+                        .{ms}
+                    </text>
+
+                    {/* FOOTER */}
+                    <line x1="5" y1="104" x2="95" y2="104" stroke="#18181b" strokeWidth="0.5" />
                     
-                    {/* Header */}
-                    <div className="w-full flex justify-between items-end border-b border-zinc-900 pb-1.5 opacity-60">
-                        <div className="flex flex-col">
-                            <span className="text-zinc-600 text-[6px] md:text-[9px] font-bold tracking-widest uppercase">Ref System</span>
-                            <span className="text-[10px] md:text-lg font-black tracking-tighter text-zinc-300">STUDIO MASTER</span>
-                        </div>
-                        <div className="text-right">
-                            <span className="text-zinc-500 text-[8px] md:text-xs font-bold tracking-wider">{dateStr}</span>
-                        </div>
-                    </div>
+                    {/* Timezone */}
+                    <text x="5" y="110" fontSize="2" fontWeight="700" fill="#4b5563">TIMEZONE</text>
+                    <text x="5" y="114" fontSize="2.5" fontWeight="700" fill="#9ca3af">{locationName} (UTC+1)</text>
 
-                    {/* Clock Circle */}
-                    <div style={{ width: clockPx, height: clockPx }} className="relative flex items-center justify-center shrink-0">
-                        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                            {dots.map((dot) => {
-                                const isActive = dot.index <= seconds;
-                                return (
-                                    <circle
-                                        key={dot.index}
-                                        cx={dot.x}
-                                        cy={dot.y}
-                                        r={isActive ? (isVerySmall ? "1.2" : "1.0") : "0.5"}
-                                        className={`transition-all duration-300 ${isActive ? 'fill-red-600 dot-glow' : 'fill-zinc-800'}`}
-                                    />
-                                );
-                            })}
-                        </svg>
+                    {/* Clock Sync */}
+                    <text x="28" y="110" fontSize="2" fontWeight="700" fill="#4b5563">CLOCK SYNC</text>
+                    <circle cx="29" cy="113.5" r="0.6" fill="#22c55e" />
+                    <text x="31" y="114" fontSize="2.5" fontWeight="700" fill="#16a34a">LOCKED</text>
 
-                        <div className="flex flex-col items-center">
-                            <div className="flex items-baseline">
-                                <span style={{ fontSize: clockPx * 0.23 }} className="font-black tracking-tighter tabular-nums glow-red leading-none">
-                                    {hours}:{minutes}
-                                </span>
-                                {!isVerySmall && (
-                                    <div className="flex flex-col ml-1.5 md:ml-3">
-                                        <span style={{ fontSize: clockPx * 0.09 }} className="font-bold text-red-600 tabular-nums leading-none">
-                                            {seconds.toString().padStart(2, '0')}
-                                        </span>
-                                        {!isMedium && (
-                                            <span style={{ fontSize: clockPx * 0.035 }} className="text-zinc-700 font-bold tabular-nums mt-0.5">.{ms}</span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            {isVerySmall && (
-                                <span style={{ fontSize: clockPx * 0.1 }} className="font-bold text-red-600 tabular-nums -mt-1">{seconds.toString().padStart(2, '0')}</span>
-                            )}
-                        </div>
-                    </div>
+                    {/* ON AIR Box */}
+                    <rect x="52" y="108" width="18" height="8" rx="1" fill="rgba(153, 27, 27, 0.1)" stroke="rgba(153, 27, 27, 0.3)" strokeWidth="0.3" />
+                    <circle cx="56" cy="112" r="0.8" fill="#ef4444">
+                        <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <text x="59" y="112.5" fontSize="3.5" fontWeight="900" fill="#ef4444" letterSpacing="0.5">ON AIR</text>
 
-                    {/* Footer */}
-                    <div className="w-full flex justify-between items-center border-t border-zinc-900 pt-2 opacity-60">
-                        <div className="flex space-x-2 md:space-x-8">
-                            <div className="flex flex-col">
-                                <span className="text-[6px] md:text-[8px] text-zinc-600 font-bold uppercase mb-0.5">Loc</span>
-                                <span className="text-[8px] md:text-xs font-bold text-zinc-400 truncate max-w-[40px] md:max-w-none">{locationName}</span>
-                            </div>
-                            {!isVerySmall && (
-                                <div className="flex flex-col border-l border-zinc-900 pl-2 md:pl-4">
-                                    <span className="text-[6px] md:text-[8px] text-zinc-600 font-bold uppercase mb-0.5">Sync</span>
-                                    <div className="flex items-center space-x-1">
-                                        <div className="h-1 w-1 rounded-full bg-green-500 shadow-[0_0_4px_#22c55e]"></div>
-                                        <span className="text-[7px] md:text-[10px] font-bold text-green-600 uppercase">Lock</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="bg-red-950/20 border border-red-900/40 px-2 md:px-5 py-0.5 md:py-1 rounded flex items-center space-x-1 md:space-x-2">
-                            <div className="h-1 w-1 md:h-2 md:w-2 rounded-full bg-red-600 animate-pulse"></div>
-                            <span className="text-red-500 font-black text-[7px] md:text-sm tracking-widest uppercase">On Air</span>
-                        </div>
-
-                        <div className="flex flex-col items-end">
-                            <span className="text-[6px] md:text-[8px] text-zinc-600 font-bold uppercase mb-0.5">KW</span>
-                            <span className="text-[9px] md:text-sm font-bold text-zinc-300 uppercase leading-none">{getWeekNumber(time)}</span>
-                        </div>
-                    </div>
-                </div>
+                    {/* Calendar */}
+                    <text x="95" y="110" fontSize="2" fontWeight="700" fill="#4b5563" textAnchor="end">CALENDAR</text>
+                    <text x="95" y="114" fontSize="3.5" fontWeight="700" fill="#d1d5db" textAnchor="end">KW {getWeekNumber(time)}</text>
+                </svg>
             );
         };
 
