@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wetter Widget</title>
+    
+    <!-- iOS Web App Metadata -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#3b82f6">
+
+    <!-- Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { 
+            background-color: transparent; 
+            font-family: sans-serif; 
+            margin: 0; padding: 0; overflow: hidden;
+            height: 100%; width: 100%;
+        }
+        #root { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="flex items-center justify-center overflow-hidden">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icons Definitionen
+        const Icons = {
+            Sun: ({className}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+                    <circle cx="12" cy="12" r="5" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1.5"/>
+                    <path d="M12 2V4M12 20V22M4.93 4.93L6.34 6.34M17.66 17.66L19.07 19.07M2 12H4M20 12H22M6.34 17.66L4.93 19.07M19.07 4.93L17.66 6.34" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+            ),
+            PartlyCloudy: ({className}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+                    <circle cx="16" cy="8" r="4" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1"/>
+                    <path d="M6 18C4.34 18 3 16.66 3 15C3 13.34 4.34 12 6 12C6.3 12 6.5 12.1 6.8 12.2C7.4 10.2 9.4 9 11.5 9C14.5 9 17 11.2 17 14C17 14.3 16.9 14.6 16.9 14.9C18.1 15.3 19 16.5 19 17.5C19 19.2 17.8 20 16.5 20H6" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1" strokeLinejoin="round"/>
+                </svg>
+            ),
+            Cloud: ({className}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+                    <path d="M6 19C4.34 19 3 17.66 3 16C3 14.34 4.34 13 6 13C6.3 13 6.5 13.1 6.8 13.2C7.4 11.2 9.4 10 11.5 10C14.5 10 17 12.2 17 15C17 15.3 16.9 15.6 16.9 15.9C18.1 16.3 19 17.5 19 18.5C19 20.2 17.8 21 16.5 21H6" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1" strokeLinejoin="round"/>
+                </svg>
+            ),
+            CloudRain: ({className}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+                    <path d="M16 16C16 16 17 16 18 16C19.5 16 21 15 21 13.5C21 12 19.5 11 18.5 11C18.5 8 16.5 6 13.5 6C11 6 9.5 7.5 9 9.5C8.5 9.5 8 9.5 7.5 9.5C5.5 9.5 4 11 4 13C4 14.5 5 15.5 6 16" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1" strokeLinejoin="round"/>
+                    <path d="M8 18L7 21M12 18L11 21M16 18L15 21" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+            ),
+            CloudSnow: ({className}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+                    <path d="M16 16C16 16 17 16 18 16C19.5 16 21 15 21 13.5C21 12 19.5 11 18.5 11C18.5 8 16.5 6 13.5 6C11 6 9.5 7.5 9 9.5C8.5 9.5 8 9.5 7.5 9.5C5.5 9.5 4 11 4 13C4 14.5 5 15.5 6 16" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1" strokeLinejoin="round"/>
+                    <circle cx="8" cy="19" r="1" fill="#bae6fd"/>
+                    <circle cx="12" cy="21" r="1" fill="#bae6fd"/>
+                    <circle cx="16" cy="19" r="1" fill="#bae6fd"/>
+                </svg>
+            ),
+            CloudLightning: ({className}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+                    <path d="M6 16C6 16 5 16 4 16C2.5 16 1 15 1 13.5C1 12 2.5 11 3.5 11C3.5 8 5.5 6 8.5 6C11 6 12.5 7.5 13 9.5C13.5 9.5 14 9.5 14.5 9.5C16.5 9.5 18 11 18 13C18 14.5 17 15.5 16 16" fill="#64748b" stroke="#475569" strokeWidth="1" strokeLinejoin="round"/>
+                    <path d="M10 14L8 18H11L9 22" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                </svg>
+            ),
+            CloudFog: ({className}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+                    <path d="M6 14C4.34 14 3 13 3 12C3 10 4.34 9 6 9C6.3 9 6.5 9.1 6.8 9.2C7.4 7.2 9.4 6 11.5 6C14.5 6 17 8.2 17 11C17 11.3 16.9 11.6 16.9 11.9C18.1 12.3 19 13.5 19 14.5" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1" strokeLinejoin="round"/>
+                    <path d="M4 17H20M6 20H18" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+            ),
+            Droplets: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>,
+            Wind: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>,
+            MapPin: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
+            ChevronLeft: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15 18-6-6 6-6"/></svg>,
+            ChevronRight: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 18 6-6-6-6"/></svg>
+        };
+
+        const App = () => {
+            const [weather, setWeather] = useState(null);
+            const [locationName, setLocationName] = useState("Standort wird ermittelt...");
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [hourlyOffset, setHourlyOffset] = useState(0);
+
+            const fetchWeather = async (lat, lon) => {
+                setLoading(true);
+                try {
+                    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
+                    const data = await weatherRes.json();
+                    setWeather(data);
+                    setLoading(false);
+                } catch (err) {
+                    console.error("Wetter-Fehler", err);
+                    setError("Wetterdaten konnten nicht geladen werden.");
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                // IP-basierte Standortermittlung (funktioniert in Iframes/Notion)
+                const getLocation = async () => {
+                    try {
+                        const res = await fetch('https://ipapi.co/json/');
+                        const data = await res.json();
+                        if (data.latitude && data.longitude) {
+                            setLocationName(data.city || "Standort gefunden");
+                            fetchWeather(data.latitude, data.longitude);
+                        } else {
+                            throw new Error("Keine Koordinaten erhalten");
+                        }
+                    } catch (e) {
+                        // Fallback: zweiter IP-Service
+                        try {
+                            const res = await fetch('https://ip-api.com/json/?fields=city,lat,lon,status');
+                            const data = await res.json();
+                            if (data.status === 'success') {
+                                setLocationName(data.city || "Standort gefunden");
+                                fetchWeather(data.lat, data.lon);
+                            } else {
+                                throw new Error("Fallback fehlgeschlagen");
+                            }
+                        } catch (e2) {
+                            setError("Standort konnte nicht ermittelt werden.");
+                            setLoading(false);
+                        }
+                    }
+                };
+                getLocation();
+            }, []);
+
+            const getWeatherIcon = (code, className = "") => {
+                const props = { className };
+                if (code === 0) return { icon: <Icons.Sun {...props} />, label: "Klar" };
+                if (code >= 1 && code <= 3) return { icon: <Icons.PartlyCloudy {...props} />, label: "Bewölkt" };
+                if (code >= 45 && code <= 48) return { icon: <Icons.CloudFog {...props} />, label: "Nebel" };
+                if (code >= 51 && code <= 67) return { icon: <Icons.CloudRain {...props} />, label: "Regen" };
+                if (code >= 71 && code <= 77) return { icon: <Icons.CloudSnow {...props} />, label: "Schnee" };
+                if (code >= 80 && code <= 99) return { icon: <Icons.CloudLightning {...props} />, label: "Gewitter" };
+                return { icon: <Icons.Cloud {...props} />, label: "Trüb" };
+            };
+
+            const getHour = (iso) => new Date(iso).getHours() + ":00";
+            const getDayName = (dateStr) => new Date(dateStr).toLocaleDateString('de-DE', { weekday: 'long' });
+
+            if (error) return (
+                <div className="bg-white p-8 rounded-3xl shadow-xl text-center max-w-xs ring-1 ring-black/5">
+                    <Icons.MapPin className="w-12 h-12 text-red-400 mx-auto mb-4"/>
+                    <p className="text-slate-600 font-medium leading-relaxed">{error}</p>
+                </div>
+            );
+
+            if (loading && !weather) return (
+                <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <div className="text-blue-500 font-bold animate-pulse text-sm uppercase tracking-widest">{locationName}</div>
+                </div>
+            );
+
+            const current = getWeatherIcon(weather.current.weather_code, "w-12 h-12");
+            const displayStartIndex = new Date().getHours() + hourlyOffset;
+
+            return (
+                <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-white relative ring-1 ring-black/5 font-sans">
+
+                    {/* TOP SECTION */}
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 relative">
+
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center space-x-1 text-slate-700">
+                                <Icons.MapPin className="w-5 h-5 text-blue-500"/>
+                                <span className="font-bold text-lg tracking-tight truncate max-w-[200px]">{locationName}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{current.label}</span>
+                                {current.icon}
+                            </div>
+                        </div>
+
+                        <div className="mt-2 text-6xl font-light tracking-tighter text-slate-800 tabular-nums">
+                            {Math.round(weather.current.temperature_2m)}°
+                        </div>
+
+                        <div className="flex space-x-3 mt-6">
+                            <div className="flex items-center space-x-2 bg-white/80 px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-600 shadow-sm border border-white">
+                                <Icons.Droplets className="w-3 h-3 text-blue-400"/><span>{weather.current.relative_humidity_2m}%</span>
+                            </div>
+                            <div className="flex items-center space-x-2 bg-white/80 px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-600 shadow-sm border border-white">
+                                <Icons.Wind className="w-3 h-3 text-gray-400"/><span>{weather.current.wind_speed_10m} km/h</span>
+                            </div>
+                        </div>
+
+                        {/* Hourly */}
+                        <div className="flex justify-between items-center mt-8 px-1">
+                            <button onClick={() => setHourlyOffset(prev => Math.max(0, prev - 1))} className="text-slate-400 hover:text-slate-600 transition-colors"><Icons.ChevronLeft className="w-6 h-6"/></button>
+                            {weather.hourly.time.slice(displayStartIndex, displayStartIndex + 4).map((t, i) => {
+                                const idx = displayStartIndex + i;
+                                const code = weather.hourly.weather_code[idx];
+                                const temp = weather.hourly.temperature_2m[idx];
+                                return (
+                                    <div key={t} className="flex flex-col items-center">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{getHour(t)}</span>
+                                        <div className="my-1">{getWeatherIcon(code, "w-7 h-7").icon}</div>
+                                        <span className="text-sm font-bold text-slate-700">{Math.round(temp)}°</span>
+                                    </div>
+                                )
+                            })}
+                            <button onClick={() => setHourlyOffset(prev => prev + 1)} className="text-slate-400 hover:text-slate-600 transition-colors"><Icons.ChevronRight className="w-6 h-6"/></button>
+                        </div>
+                    </div>
+
+                    {/* BOTTOM SECTION */}
+                    <div className="bg-slate-800 p-6 text-white">
+                        <div className="flex flex-col space-y-4">
+                            {weather.daily.time.slice(0, 5).map((d, i) => {
+                                const code = weather.daily.weather_code[i];
+                                const max = weather.daily.temperature_2m_max[i];
+                                const min = weather.daily.temperature_2m_min[i];
+                                return (
+                                    <div key={d} className="flex items-center justify-between group cursor-default">
+                                        <span className="w-24 text-sm font-medium text-slate-300 group-hover:text-white transition-colors">{i === 0 ? "Heute" : getDayName(d)}</span>
+                                        <div className="flex-1 flex justify-center opacity-80 group-hover:opacity-100 transition-opacity">{getWeatherIcon(code, "w-6 h-6").icon}</div>
+                                        <div className="w-20 flex justify-end space-x-3 text-sm">
+                                            <span className="font-bold">{Math.round(max)}°</span>
+                                            <span className="text-slate-400 font-medium">{Math.round(min)}°</span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
