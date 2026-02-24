@@ -94,11 +94,26 @@
             const [error, setError] = useState(null);
             const [hourlyOffset, setHourlyOffset] = useState(0);
 
-            const fetchWeather = async (lat, lon) => {
+            const fetchWeather = async (lat, lon, cityName) => {
                 setLoading(true);
                 try {
                     const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
                     const data = await weatherRes.json();
+
+                    // Ortsname: falls schon bekannt, verwenden; sonst per Reverse Geocoding
+                    if (cityName) {
+                        setLocationName(cityName);
+                    } else {
+                        try {
+                            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                            const geoData = await geoRes.json();
+                            const city = geoData.address.city || geoData.address.town || geoData.address.village || "Standort gefunden";
+                            setLocationName(city);
+                        } catch (e) {
+                            setLocationName("Standort gefunden");
+                        }
+                    }
+
                     setWeather(data);
                     setLoading(false);
                 } catch (err) {
@@ -108,36 +123,50 @@
                 }
             };
 
-            useEffect(() => {
-                // IP-basierte Standortermittlung (funktioniert in Iframes/Notion)
-                const getLocation = async () => {
+            // IP-basierter Fallback
+            const getLocationByIP = async () => {
+                try {
+                    const res = await fetch('https://ipwho.is/');
+                    const data = await res.json();
+                    if (data.success && data.latitude && data.longitude) {
+                        fetchWeather(data.latitude, data.longitude, data.city || null);
+                    } else {
+                        throw new Error("ipwho.is fehlgeschlagen");
+                    }
+                } catch (e) {
                     try {
                         const res = await fetch('https://ipapi.co/json/');
                         const data = await res.json();
                         if (data.latitude && data.longitude) {
-                            setLocationName(data.city || "Standort gefunden");
-                            fetchWeather(data.latitude, data.longitude);
+                            fetchWeather(data.latitude, data.longitude, data.city || null);
                         } else {
-                            throw new Error("Keine Koordinaten erhalten");
+                            throw new Error("Fallback fehlgeschlagen");
                         }
-                    } catch (e) {
-                        // Fallback: zweiter IP-Service
-                        try {
-                            const res = await fetch('https://ip-api.com/json/?fields=city,lat,lon,status');
-                            const data = await res.json();
-                            if (data.status === 'success') {
-                                setLocationName(data.city || "Standort gefunden");
-                                fetchWeather(data.lat, data.lon);
-                            } else {
-                                throw new Error("Fallback fehlgeschlagen");
-                            }
-                        } catch (e2) {
-                            setError("Standort konnte nicht ermittelt werden.");
-                            setLoading(false);
-                        }
+                    } catch (e2) {
+                        setError("Standort konnte nicht ermittelt werden.");
+                        setLoading(false);
                     }
-                };
-                getLocation();
+                }
+            };
+
+            useEffect(() => {
+                // Strategie: GPS zuerst (exakt), bei Fehler Fallback auf IP
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            // GPS erfolgreich → exakter Standort + Reverse Geocoding für Ortsnamen
+                            fetchWeather(position.coords.latitude, position.coords.longitude, null);
+                        },
+                        () => {
+                            // GPS verweigert/nicht verfügbar → IP-Fallback
+                            getLocationByIP();
+                        },
+                        { timeout: 5000, enableHighAccuracy: false }
+                    );
+                } else {
+                    // Kein Geolocation-Support → IP-Fallback
+                    getLocationByIP();
+                }
             }, []);
 
             const getWeatherIcon = (code, className = "") => {
