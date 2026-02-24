@@ -12,16 +12,15 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
 
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body, html { 
-            background-color: transparent; /* Wichtig für Widget-Optik */
+            background-color: transparent;
             margin: 0; 
             padding: 0;
             overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 100%;
+            width: 100%;
         }
 
         #root {
@@ -30,10 +29,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 4px;
         }
 
         svg {
-            /* Das SVG skaliert sich immer passend zum Fenster */
+            display: block;
             width: 100%;
             height: 100%;
             max-width: 100%;
