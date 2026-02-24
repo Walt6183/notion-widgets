@@ -87,6 +87,12 @@
             const seconds = time.getSeconds();
             const ms = Math.floor(time.getMilliseconds() / 10).toString().padStart(2, '0');
             
+            // Dynamischer UTC-Offset
+            const offsetMin = -time.getTimezoneOffset();
+            const offsetH = Math.floor(Math.abs(offsetMin) / 60);
+            const offsetM = Math.abs(offsetMin) % 60;
+            const utcStr = `UTC${offsetMin >= 0 ? '+' : '-'}${offsetH}${offsetM ? ':' + String(offsetM).padStart(2,'0') : ''}`;
+            
             const dateStr = time.toLocaleDateString('de-DE', { 
                 weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' 
             }).toUpperCase();
@@ -94,9 +100,9 @@
             // Sekunden-Punkte (Koordinaten im 100x120 System)
             const dots = useMemo(() => {
                 const temp = [];
-                const radius = 42; 
+                const radius = 38; 
                 const centerX = 50;
-                const centerY = 58; 
+                const centerY = 60; 
                 for (let i = 0; i < 60; i++) {
                     const angle = (i * 6 - 90) * (Math.PI / 180);
                     temp.push({ 
@@ -136,39 +142,41 @@
                         );
                     })}
 
-                    {/* Zeit HH:MM (Zentriert) */}
+                    {/* HH:MM (Weiss, endet am Splitpunkt) */}
                     <text 
-                        x="44" 
-                        y="60" 
-                        textAnchor="middle" 
+                        x="58" 
+                        y="58" 
+                        textAnchor="end" 
                         dominantBaseline="middle" 
                         fill="white" 
-                        fontSize="24" 
+                        fontSize="16" 
                         fontWeight="800" 
                         className="glow-red"
-                        style={{ letterSpacing: '-1.5px' }}
+                        style={{ letterSpacing: '-1px' }}
                     >
                         {hours}:{minutes}
                     </text>
 
-                    {/* Sekunden (Rechts daneben) */}
+                    {/* :SS (Rot, beginnt am Splitpunkt) */}
                     <text 
-                        x="66" 
+                        x="58" 
                         y="58" 
                         textAnchor="start" 
                         dominantBaseline="middle" 
                         fill="#ef4444" 
-                        fontSize="10" 
-                        fontWeight="700"
+                        fontSize="16" 
+                        fontWeight="800" 
+                        className="glow-red"
+                        style={{ letterSpacing: '-1px' }}
                     >
-                        {seconds.toString().padStart(2, '0')}
+                        :{seconds.toString().padStart(2, '0')}
                     </text>
 
-                    {/* Millisekunden (Unter den Sekunden) */}
+                    {/* Millisekunden (Zentriert unter den Sekunden-Ziffern) */}
                     <text 
-                        x="66" 
-                        y="66" 
-                        textAnchor="start" 
+                        x="72" 
+                        y="67" 
+                        textAnchor="middle" 
                         dominantBaseline="middle" 
                         fill="#3f3f46" 
                         fontSize="3.8" 
@@ -182,7 +190,7 @@
                     
                     {/* Timezone */}
                     <text x="7" y="108" fontSize="2.2" fontWeight="700" fill="#4b5563">TIMEZONE</text>
-                    <text x="7" y="113" fontSize="2.8" fontWeight="700" fill="#9ca3af">{locationName} (UTC+1)</text>
+                    <text x="7" y="113" fontSize="2.8" fontWeight="700" fill="#9ca3af">{locationName} ({utcStr})</text>
 
                     {/* Clock Sync */}
                     <text x="32" y="108" fontSize="2.2" fontWeight="700" fill="#4b5563">CLOCK SYNC</text>
@@ -191,8 +199,8 @@
 
                     {/* ON AIR Indicator */}
                     <rect x="55" y="107" width="20" height="8" rx="1.5" fill="rgba(153, 27, 27, 0.15)" stroke="rgba(239, 68, 68, 0.3)" strokeWidth="0.3" />
-                    <circle cx="59" cy="111" r="0.8" fill="#ef4444" className="animate-pulse-red" />
-                    <text x="62" y="111.8" fontSize="3.5" fontWeight="900" fill="#ef4444" letterSpacing="0.4">ON AIR</text>
+                    <circle cx="58" cy="111" r="0.8" fill="#ef4444" className="animate-pulse-red" />
+                    <text x="60.5" y="111.8" fontSize="3.2" fontWeight="900" fill="#ef4444" letterSpacing="0.2">ON AIR</text>
 
                     {/* Calendar */}
                     <text x="93" y="108" fontSize="2.2" fontWeight="700" fill="#4b5563" textAnchor="end">CALENDAR</text>
